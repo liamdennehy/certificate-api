@@ -18,3 +18,5 @@ $router->get('/version', function () use ($router) {
 $router->get('/certificates', 'Certificates@getCertificates');
 
 $router->get('/certificates/{certificateId}', 'Certificates@getCertificate');
+
+$router->post('/certificates', 'Certificates@postCertificate');

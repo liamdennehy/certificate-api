@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fb007af12fe6a00a23b049d8357ebb9c",
+    "content-hash": "a2888490daf98c13ea45fe7badb32029",
     "packages": [
         {
             "name": "doctrine/inflector",
@@ -1465,16 +1465,16 @@
         },
         {
             "name": "liamdennehy/eidas-certificate",
-            "version": "dev-master",
+            "version": "0.6.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/liamdennehy/eidas-certificate-parse.git",
-                "reference": "ac2a3c565bb8028fc74faf47a7e2b544b0784cb9"
+                "reference": "d282f8da98696ed6017953f7638de66cca14063e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/ac2a3c565bb8028fc74faf47a7e2b544b0784cb9",
-                "reference": "ac2a3c565bb8028fc74faf47a7e2b544b0784cb9",
+                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/d282f8da98696ed6017953f7638de66cca14063e",
+                "reference": "d282f8da98696ed6017953f7638de66cca14063e",
                 "shasum": ""
             },
             "require": {
@@ -1505,7 +1505,7 @@
                 }
             ],
             "description": "eIDAS Trust Services and Qualified Certificate Statement (QCStatement) library",
-            "time": "2019-09-28T14:45:59+00:00"
+            "time": "2019-09-29T16:55:39+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -5290,7 +5290,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "liamdennehy/eidas-certificate": 20
+        "liamdennehy/eidas-certificate": 0
     },
     "prefer-stable": true,
     "prefer-lowest": false,
