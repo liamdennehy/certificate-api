@@ -15,5 +15,6 @@ $router->get('/version', function () use ($router) {
     return $router->app->version();
 });
 
-$router->get('/certificates', 'Certificates@getCertificate');
+$router->get('/certificates', 'Certificates@getCertificates');
+
 $router->get('/certificates/{certificateId}', 'Certificates@getCertificate');
