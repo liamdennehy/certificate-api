@@ -6,7 +6,7 @@ namespace App;
 abstract class Helpers
 {
 
-  public static function getTLXML($tlURI, $dataDir, $name)
+  public static function getTLXML($tlURI, $dataDir, $name, $maxAge = 86400)
   {
     $now = (int)date('U');
     $tlXML = null;
@@ -16,7 +16,7 @@ abstract class Helpers
     if (file_exists($tlFilePath)) {
       $tlXMLAge = $now - filemtime($tlFilePath);
       print "Cached '$name' is $tlXMLAge seconds old".PHP_EOL;
-      if ($tlXMLAge < 86400) {
+      if ($tlXMLAge < $maxAge) {
         print "Loading local '$name' from $tlURI".PHP_EOL;
         $tlXML = file_get_contents($tlFilePath);
       }
@@ -29,7 +29,7 @@ abstract class Helpers
 
   }
 
-  public static function persistTLXML($tlURI, $dataDir, $tl)
+  public static function persistTLXML($tlURI, $dataDir, $tl, $maxAge = 86400)
   {
       $now = (int)date('U');
       $tlXMLAge = null;
@@ -41,7 +41,7 @@ abstract class Helpers
       if (file_exists($tlFilePath)) {
         $tlXMLAge = $now - filemtime($tlFilePath);
       }
-      if (is_null($tlXMLAge) || $tlXMLAge >= 86400) {
+      if (is_null($tlXMLAge) || $tlXMLAge >= $maxAge) {
         print 'Saving TrustedList '.$tlName." in $tlFilePath".PHP_EOL;
         file_put_contents($tlFilePath,$tl->getXML());
         if (file_exists($symlink)) {
