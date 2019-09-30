@@ -5,3 +5,4 @@ Homestead.yaml
 .env
 .tags
 /data
+.phpunit.result.cache
