@@ -9,6 +9,7 @@ use App\DataSource;
 
 $lotlXML = null;
 $dataDir = __DIR__ . '/../data/';
+// TODO: Move to parameters
 $journalDir = $dataDir.'journal/c-276-1/';
 $lotlURI = TrustedList::ListOfTrustedListsXMLPath;
 $lotlXML = Helpers::getTLXML($lotlURI, $dataDir, 'List of Trusted Lists');
@@ -46,12 +47,11 @@ foreach ($lotl->getTLPointerPaths() as $title => $tlPointer) {
         $unVerifiedTLs[] = $title;
     }
 }
-exit;
-$serviceTypeCounts = [];
+
 $tspServices = $lotl->getTSPServices(true);
-// var_dump($tspServices["POSTArCA G2"]); exit;
+// var_dump(array_keys($tspServices)); exit;
 $tspServiceAttributes = [];
-foreach ($tspServices as $name => $tspService) {
-    $tspServiceAttributes[$name] = $tspService;
+foreach ($tspServices as $name => $tspServiceAttributes) {
+    print $tspServiceAttributes['name'].PHP_EOL;
+    Helpers::persistTSPService($tspServiceAttributes,$dataDir);
 }
-print json_encode($tspServiceAttributes).PHP_EOL;
