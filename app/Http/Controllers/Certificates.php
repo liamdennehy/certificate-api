@@ -14,6 +14,7 @@ class Certificates extends Controller
 {
     private $dataDir;
 
+    const maxUpload = 10240;
     /**
      * Create a new controller instance.
      *
@@ -39,7 +40,7 @@ class Certificates extends Controller
           case 'application/json':
             $response = $this->response->withStatus(200);
             $response = $response->withHeader('Content-Type','application/json');
-            $body = json_encode($crt->getAttributes());
+            $body = json_encode($crt->getAttributes(), JSON_PRETTY_PRINT);
             $responseBody = Stream::create($body);
             $response = $response->withBody($responseBody);
             break;
@@ -49,10 +50,14 @@ class Certificates extends Controller
 
             break;
         }
-        return self::respond($response);
       } else {
-        return "bar ".$certDir.$certificateId.'.crt';
+        $response = $this->response->withStatus(404);
+        $response = $response->withHeader('Content-Type','application/json');
+        $body = json_encode(['error' => 'Not Found']);
+        $responseBody = Stream::create($body);
+        $response = $response->withBody($responseBody);
       }
+      return self::respond($response);
     }
 
     public function getCertificates(ServerRequestInterface $request)
@@ -63,24 +68,46 @@ class Certificates extends Controller
 
     public function postCertificate(ServerRequestInterface $request)
     {
-        if (sizeof($request->getUploadedFiles()) > 1) {
-          $response = $this->response->withStatus(400);
-          $response = $response->withHeader('Content-Type','application/json');
-          $body = json_encode(["error" => 'Only one candidate certificate at a time']);
-          $responseBody = Stream::create($body);
-          $response = $response->withBody($responseBody);
-          return self::respond($response);
+        if ($request->hasHeader('content-type')) {
+          $ct = strtolower($request->getHeader('content-type')[0]);
         }
-        $filename = array_keys($request->getUploadedFiles())[0];
-        if ($request->getUploadedFiles()[$filename]->getSize() > 10241) {
-          $response = $this->response->withStatus(400);
-          $response = $response->withHeader('Content-Type','application/json');
-          $body = json_encode(["error" => 'Too much data arrived, is this really a certificate?']);
-          $responseBody = Stream::create($body);
-          $response = $response->withBody($responseBody);
-          return self::respond($response);
+        if (sizeof($request->getUploadedFiles()) == 1) {
+          if (current($request->getUploadedFiles())->getSize() >= self::maxUpload) {
+            return $this->respondError(400,'Too much data arrived, is this really a certificate?');
+          }
+          $candidate = stream_get_contents(current($request->getUploadedFiles())->getStream()->detach());
         }
-        $uploadedData = stream_get_contents($request->getUploadedFiles()[$filename]->getStream()->detach(),10240);
+        switch ($ct) {
+          case 'application/x-www-form-urlencoded':
+            if ($request->getBody()->getSize() >= 10) {
+              return $this->respondError(400,'Too much data arrived, is this really a certificate?');
+            }
+            if(substr((string)$request->getBody(),0,27) == '-----BEGIN CERTIFICATE-----')
+            break;
+          case '':
+            if (sizeof($request->getUploadedFiles()) > 1) {
+              return $this->respondError(400,'Only one candidate certificate at a time');
+            } elseif (sizeof($request->getUploadedFiles()) == 0) {
+              return $this->respondError(400,'No file uploaded');
+            }
+            $filename = array_keys($request->getUploadedFiles())[0];
+            if ($request->getUploadedFiles()[$filename]->getSize() >= 10241) {
+              $response = $this->response->withStatus(400);
+              $response = $response->withHeader('Content-Type','application/json');
+              $body = json_encode(["error" => 'Too much data arrived, is this really a certificate?']);
+              $responseBody = Stream::create($body);
+              $response = $response->withBody($responseBody);
+              return self::respond($response);
+            }
+            $uploadedData = stream_get_contents($request->getUploadedFiles()[$filename]->getStream()->detach(),10240);
+            // code...
+            break;
+
+          default:
+          return $this->respondError(400,'Could not understand the request');
+
+            break;
+        }
         try {
           $candidate = new X509Certificate($uploadedData);
         } catch (\Exception $e) {
@@ -91,13 +118,13 @@ class Certificates extends Controller
           $response = $response->withBody($responseBody);
           return self::respond($response);
         }
+        $this->persistCertificate($candidate);
         $crtId = $candidate->getIdentifier();
         $getPath = "/certificates/$crtId?fromPost=true";
         $response = $this->response->withStatus(302);
         $response = $response->withHeader('Location',$getPath);
         return self::respond($response);
 
-        // return $this->persistCertificate($candidate);
     }
 
     public function persistCertificate($crt)
@@ -113,6 +140,16 @@ class Certificates extends Controller
 
     private function respond($response)
     {
+      return (new HttpFoundationFactory())->createResponse($response);
+    }
+
+    public function respondError($code, $errorMsg)
+    {
+      $response = $this->response->withStatus($code);
+      $response = $response->withHeader('Content-Type','application/json');
+      $body = json_encode(["error" => $errorMsg]);
+      $responseBody = Stream::create($body);
+      $response = $response->withBody($responseBody);
       return (new HttpFoundationFactory())->createResponse($response);
     }
     //
