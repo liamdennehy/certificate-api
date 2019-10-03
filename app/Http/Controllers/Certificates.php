@@ -69,14 +69,9 @@ class Certificates extends Controller
     public function postCertificate(ServerRequestInterface $request)
     {
         if ($request->hasHeader('content-type')) {
-          $ct = strtolower($request->getHeader('content-type')[0]);
+          $ct = strtolower($request->getHeaderLine('content-type'));
         }
-        if (sizeof($request->getUploadedFiles()) == 1) {
-          if (current($request->getUploadedFiles())->getSize() >= self::maxUpload) {
-            return $this->respondError(400,'Too much data arrived, is this really a certificate?');
-          }
-          $candidate = stream_get_contents(current($request->getUploadedFiles())->getStream()->detach());
-        }
+        $ct = explode(';',$ct)[0];
         switch ($ct) {
           case 'application/x-www-form-urlencoded':
             if ($request->getBody()->getSize() >= 10) {
@@ -84,22 +79,19 @@ class Certificates extends Controller
             }
             if(substr((string)$request->getBody(),0,27) == '-----BEGIN CERTIFICATE-----')
             break;
-          case '':
+          case 'multipart/form-data':
             if (sizeof($request->getUploadedFiles()) > 1) {
               return $this->respondError(400,'Only one candidate certificate at a time');
             } elseif (sizeof($request->getUploadedFiles()) == 0) {
               return $this->respondError(400,'No file uploaded');
             }
-            $filename = array_keys($request->getUploadedFiles())[0];
-            if ($request->getUploadedFiles()[$filename]->getSize() >= 10241) {
-              $response = $this->response->withStatus(400);
-              $response = $response->withHeader('Content-Type','application/json');
-              $body = json_encode(["error" => 'Too much data arrived, is this really a certificate?']);
-              $responseBody = Stream::create($body);
-              $response = $response->withBody($responseBody);
-              return self::respond($response);
+            if (sizeof($request->getUploadedFiles()) == 1) {
+              if (current($request->getUploadedFiles())->getSize() >= self::maxUpload) {
+                return $this->respondError(400,'Too much data arrived, is this really a certificate?');
+              }
+              $filename = array_keys($request->getUploadedFiles())[0];
+              $candidate = stream_get_contents(current($request->getUploadedFiles())->getStream()->detach());
             }
-            $uploadedData = stream_get_contents($request->getUploadedFiles()[$filename]->getStream()->detach(),10240);
             // code...
             break;
 
@@ -109,16 +101,18 @@ class Certificates extends Controller
             break;
         }
         try {
-          $candidate = new X509Certificate($uploadedData);
+          $candidate = new X509Certificate($candidate);
         } catch (\Exception $e) {
-          $response = $this->response->withStatus(400);
-          $response = $response->withHeader('Content-Type','application/json');
-          $body = json_encode(["error" => $e->getMessage()]);
-          $responseBody = Stream::create($body);
-          $response = $response->withBody($responseBody);
-          return self::respond($response);
+          return $this->respondError(400,"Could not parse input as a certificate: ".$e->getMessage());
         }
-        $this->persistCertificate($candidate);
+        try {
+
+          $this->persistCertificate($candidate);
+        } catch (\Exception $e) {
+          return $this->respondError(500,'Cannot persist certificate');
+
+        }
+
         $crtId = $candidate->getIdentifier();
         $getPath = "/certificates/$crtId?fromPost=true";
         $response = $this->response->withStatus(302);
