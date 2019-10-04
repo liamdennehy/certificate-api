@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers;
 use Psr\Http\Message\ServerRequestInterface;
 use eIDASCertificate\Certificate\X509Certificate;
 use Nyholm\Psr7\Response;
@@ -20,8 +21,11 @@ class Certificates extends Controller
      */
     public function __construct()
     {
-        $this->dataDir = $certDir = __DIR__.'/../../../data/';
+        $this->dataDir = __DIR__.'/../../../data/';
         $this->response = new Response();
+        Helpers::mkdir($this->dataDir.'certs/');
+        Helpers::mkdir($this->dataDir.'CAs/');
+        Helpers::mkdir($this->dataDir.'SKIs/');
     }
 
     public function getCertificate(ServerRequestInterface $request, $certificateId = null)
