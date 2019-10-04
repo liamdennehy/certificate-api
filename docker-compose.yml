@@ -14,16 +14,18 @@ php:
     - ./app:/var/www/html/app
     - ./resources:/var/www/html/resources
     - ./routes:/var/www/html/routes
-  working_dir: /var/www/html/app/public
+    - ./data.docker:/var/www/html/data
+  working_dir: /var/www/html/public
   command: php-fpm
   # links:
     # - db
     # - cache
   ports:
     - "9000:9000"
-  # environment:
-    # APP_ENV: local
-    # APP_DEBUG: 'true'
+  environment:
+    APP_ENV: local
+    APP_DEBUG: 'true'
+    DATA_GID: 1000
     # APP_KEY: SomeRandomKey!!!
     # APP_LOCALE: en
     # APP_FALLBACK_LOCALE: en
