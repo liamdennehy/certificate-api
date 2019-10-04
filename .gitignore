@@ -6,3 +6,5 @@ Homestead.yaml
 .tags
 /data
 .phpunit.result.cache
+data.docker/
+.php_cs.cache
