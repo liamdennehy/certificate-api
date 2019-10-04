@@ -15,6 +15,10 @@ $router->get('/version', function () use ($router) {
     return $router->app->version();
 });
 
+$router->get('/info', function () use ($router) {
+    return phpinfo();
+});
+
 $router->get('/certificates', 'Certificates@getCertificates');
 
 $router->get('/certificates/{certificateId}', 'Certificates@getCertificate');

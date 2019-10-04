@@ -114,4 +114,16 @@ abstract class Helpers
     );
 
   }
+
+  public static function mkdir($dir)
+  {
+      if (!is_dir($dir)) {
+        if (file_exists($dir)) {
+          throw new \Exception("$dir exists and is not a directory", 1);
+        } else {
+          mkdir($dir);
+        }
+      }
+      chmod($dir, 0664);
+  }
 }
