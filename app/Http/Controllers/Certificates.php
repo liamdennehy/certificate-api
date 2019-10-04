@@ -37,6 +37,14 @@ class Certificates extends Controller
       if (file_exists($this->crtDir.$certificateId.'.crt')) {
         $crtFile = \file_get_contents($this->crtDir.$certificateId.'.crt');
         $crt = new X509Certificate($crtFile);
+        foreach ($this->getFromSKI($crt->getAuthorityKeyIdentifier()) as $issuer) {
+          try {
+            $crt->withIssuer($issuer);
+          } catch (\Exception $e) {
+            throw new \Exception("Unable to process issuer cert (this should never happen)", 1);
+          }
+        }
+        $issuers = $this->getFromSKI($crt->getAuthorityKeyIdentifier());
         $accept = explode(',',$request->getHeaderLine('Accept'))[0];
         switch ($accept) {
           case 'application/json':
@@ -53,11 +61,7 @@ class Certificates extends Controller
             break;
         }
       } else {
-        $response = $this->response->withStatus(404);
-        $response = $response->withHeader('Content-Type','application/json');
-        $body = json_encode(['error' => 'Not Found']);
-        $responseBody = Stream::create($body);
-        $response = $response->withBody($responseBody);
+        return $this->respondError(404,'Not Found');
       }
       return self::respond($response);
     }
@@ -101,7 +105,7 @@ class Certificates extends Controller
             break;
 
           default:
-          return $this->respondError(400,'Could not understand the request');
+            return $this->respondError(400,'Could not understand the request');
 
             break;
         }
@@ -184,5 +188,19 @@ class Certificates extends Controller
           "-----END CERTIFICATE-----";
       }
       return $body;
+    }
+
+    public function getFromSKI($ski)
+    {
+        $crts = [];
+        $ski = bin2hex($ski);
+        if (is_dir($this->skiDir.$ski)) {
+          foreach (scandir($this->skiDir.$ski) as $crtFile) {
+            if (is_link($this->skiDir.$ski.'/'.$crtFile)) {
+              $crts[] = new X509Certificate(file_get_contents($this->skiDir.$ski.'/'.$crtFile));
+            }
+          }
+        }
+        return $crts;
     }
 }
