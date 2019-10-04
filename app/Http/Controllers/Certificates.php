@@ -23,17 +23,19 @@ class Certificates extends Controller
     public function __construct()
     {
         $this->dataDir = __DIR__.'/../../../data/';
+        $this->crtDir = $this->dataDir.'certs/';
+        $this->caDir = $this->dataDir.'CAs/';
+        $this->skiDir = $this->dataDir.'SKIs/';
         $this->response = new Response();
         Helpers::mkdir($this->dataDir.'certs/');
         Helpers::mkdir($this->dataDir.'CAs/');
         Helpers::mkdir($this->dataDir.'SKIs/');
     }
 
-    public function getCertificate(ServerRequestInterface $request, $certificateId = null)
+    public function getCertificate(ServerRequestInterface $request, $certificateId)
     {
-      $certDir = $this->dataDir .'certs/';
-      if (file_exists($certDir.$certificateId.'.crt')) {
-        $crtFile = \file_get_contents($certDir.$certificateId.'.crt');
+      if (file_exists($this->crtDir.$certificateId.'.crt')) {
+        $crtFile = \file_get_contents($this->crtDir.$certificateId.'.crt');
         $crt = new X509Certificate($crtFile);
         $accept = explode(',',$request->getHeaderLine('Accept'))[0];
         switch ($accept) {
@@ -74,10 +76,12 @@ class Certificates extends Controller
         $ct = explode(';',$ct)[0];
         switch ($ct) {
           case 'application/x-www-form-urlencoded':
-            if ($request->getBody()->getSize() >= 10) {
+            if ($request->getBody()->getSize() >= 10241) {
               return $this->respondError(400,'Too much data arrived, is this really a certificate?');
             }
-            if(substr((string)$request->getBody(),0,27) == '-----BEGIN CERTIFICATE-----')
+            $body = trim((string)$request->getBody());
+            $body = str_replace("\r\n","\n",$body);
+            $candidate = self::PEMFromBody($body);
             break;
           case 'multipart/form-data':
             if (sizeof($request->getUploadedFiles()) > 1) {
@@ -90,7 +94,8 @@ class Certificates extends Controller
                 return $this->respondError(400,'Too much data arrived, is this really a certificate?');
               }
               $filename = array_keys($request->getUploadedFiles())[0];
-              $candidate = stream_get_contents(current($request->getUploadedFiles())->getStream()->detach());
+              $body = trim(stream_get_contents(current($request->getUploadedFiles())->getStream()->detach()));
+              $candidate = self::PEMFromBody($body);
             }
             // code...
             break;
@@ -101,19 +106,13 @@ class Certificates extends Controller
             break;
         }
         try {
-          $candidate = new X509Certificate($candidate);
+          $crt = new X509Certificate($candidate);
         } catch (\Exception $e) {
           return $this->respondError(400,"Could not parse input as a certificate: ".$e->getMessage());
         }
-        try {
+        $this->persistCertificate($crt);
 
-          $this->persistCertificate($candidate);
-        } catch (\Exception $e) {
-          return $this->respondError(500,'Cannot persist certificate');
-
-        }
-
-        $crtId = $candidate->getIdentifier();
+        $crtId = $crt->getIdentifier();
         $getPath = "/certificates/$crtId?fromPost=true";
         $response = $this->response->withStatus(302);
         $response = $response->withHeader('Location',$getPath);
@@ -124,12 +123,21 @@ class Certificates extends Controller
     public function persistCertificate($crt)
     {
         $crtId = $crt->getIdentifier();
-        $crtPath = $this->crtDir.$crt->getIdentifier().'.crt';
+        $crtFileName = $crt->getIdentifier().'.crt';
+        $crtPath = $this->crtDir.$crtFileName;
         if (file_exists($crtPath)) {
             return false;
+        } else {
+          if (Helpers::persistFile($crtPath,$crt->toPEM())) {
+            if ($crt->isCA()) {
+              $ski = bin2hex($crt->getSubjectKeyIdentifier());
+              $skiDir = $this->skiDir.'/'.$ski.'/';
+              Helpers::mkdir($skiDir);
+              Helpers::link($skiDir.$crtFileName, '../../certs/'.$crtFileName);
+              Helpers::link($this->caDir.$crtFileName,'../certs/'.$crtFileName);
+            };
+          }
         }
-        file_put_contents($crtPath,$crt->toPEM());
-        return true;
     }
 
     private function respond($response)
@@ -146,5 +154,35 @@ class Certificates extends Controller
       $response = $response->withBody($responseBody);
       return (new HttpFoundationFactory())->createResponse($response);
     }
-    //
+
+    public static function PEMFromBody($body)
+    {
+      $body = trim($body);
+      // TODO: move to library
+      $bodyLines = explode("\n",$body);
+      // var_dump($bodyLines);
+      if (sizeof($bodyLines) > 1 ) {
+        if (in_array('-----BEGIN CERTIFICATE-----',$bodyLines) && in_array('-----END CERTIFICATE-----',$bodyLines)) {
+          while ($bodyLines[0] != '-----BEGIN CERTIFICATE-----') {
+            array_shift($bodyLines);
+          }
+          while (end($bodyLines) != '-----END CERTIFICATE-----') {
+            unset($bodyLines[sizeof($bodyLines)]);
+          }
+          $body = implode("\n",$bodyLines);
+        }
+      } elseif
+      (
+        substr($body,0,27) == '-----BEGIN CERTIFICATE-----' &&
+        substr($body,-25,25) == '-----END CERTIFICATE-----'
+      ) {
+        $b64 = trim(substr(substr($body,27),0,strlen($body)-52));
+        var_dump($b64);
+        $body =
+          "-----BEGIN CERTIFICATE-----\r\n".
+          chunk_split(base64_encode(base64_decode($b64)), 64, "\r\n").
+          "-----END CERTIFICATE-----";
+      }
+      return $body;
+    }
 }
