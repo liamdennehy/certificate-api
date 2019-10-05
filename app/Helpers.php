@@ -15,14 +15,11 @@ abstract class Helpers
         $tlFilePath = $tlDirPath.'/tl-'.$tlURIId.'.xml';
         if (file_exists($tlFilePath)) {
             $tlXMLAge = $now - filemtime($tlFilePath);
-            print "Cached '$name' is $tlXMLAge seconds old".PHP_EOL;
             if ($tlXMLAge < $maxAge) {
-                print "Loading local '$name' from $tlURI".PHP_EOL;
                 $tlXML = file_get_contents($tlFilePath);
             }
         }
         if (empty($tlXML)) {
-            print "Fetching $tlURI".PHP_EOL;
             $tlXML = DataSource::getHTTP($tlURI);
         }
         return $tlXML;
@@ -41,7 +38,6 @@ abstract class Helpers
             $tlXMLAge = $now - filemtime($tlFilePath);
         }
         if (is_null($tlXMLAge) || $tlXMLAge >= $maxAge) {
-            print 'Saving TrustedList '.$tlName." in $tlFilePath".PHP_EOL;
             file_put_contents($tlFilePath, $tl->getXML());
             if (file_exists($symlink)) {
                 unlink($symlink);
@@ -65,16 +61,24 @@ abstract class Helpers
         $country = $tspServiceAttributes['trustServiceProvider']['trustedList']['schemeTerritory'];
         $name = $country.': '.$tspServiceAttributes['name'];
         $ski = $tspServiceAttributes['skiHex'];
+        $skiLen = strlen(hex2bin($ski));
+        if (! in_array($skiLen,[6,8,20,32])) {
+          if ($skiLen != 0 && $skiLen != 294) { // some spanish provider put the entire public key in the SKI field...
+            print PHP_EOL."Unsupported SKI length: ".$skiLen;
+          }
+          $ski = null;
+        }
         if (! empty($ski)) {
             $skiDir = $skisDir.$ski.'/';
             if (!file_exists($skiDir)) {
                 mkdir($skiDir);
             }
         }
-        foreach ($tspServiceAttributes['certificates'] as $id => $PEM) {
+        foreach ($tspServiceAttributes['certificates'] as $certificate) {
+            $PEM = $certificate['PEM'];
             $crt = new X509Certificate($PEM);
             $crtId = $crt->getIdentifier();
-            file_put_contents($certsDir.'/'.$id.'.crt', $PEM);
+            file_put_contents($certsDir.'/'.$crtId.'.crt', $PEM);
             if (! empty($ski)) {
                 $skiLinked = false;
                 $skiEntries = scandir($skiDir);
@@ -108,8 +112,9 @@ abstract class Helpers
             symlink('../TSPServices/'.$tspServiceId.'.json', $crtTSPServiceJsonLink);
         }
         file_put_contents(
-        $tspServicesDir.$tspServiceId.'.json',
-        json_encode($tspServiceAttributes, JSON_PRETTY_PRINT)
+          $tspServicesDir.$tspServiceId.'.json',
+          json_encode($tspServiceAttributes, JSON_PRETTY_PRINT
+        )
     );
     }
 
