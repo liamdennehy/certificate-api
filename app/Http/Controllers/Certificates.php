@@ -34,34 +34,25 @@ class Certificates extends Controller
 
     public function getCertificate(ServerRequestInterface $request, $certificateId)
     {
-      if (file_exists($this->crtDir.$certificateId.'.crt')) {
-        $crtFile = \file_get_contents($this->crtDir.$certificateId.'.crt');
-        $crt = new X509Certificate($crtFile);
-        foreach ($this->getFromSKI($crt->getAuthorityKeyIdentifier()) as $issuer) {
-          try {
-            $crt->withIssuer($issuer);
-          } catch (\Exception $e) {
-            throw new \Exception("Unable to process issuer cert (this should never happen)", 1);
-          }
-        }
-        $issuers = $this->getFromSKI($crt->getAuthorityKeyIdentifier());
-        $accept = explode(',',$request->getHeaderLine('Accept'))[0];
-        switch ($accept) {
-          case 'application/json':
-            $response = $this->response->withStatus(200);
-            $response = $response->withHeader('Content-Type','application/json');
-            $body = json_encode($crt->getAttributes(), JSON_PRETTY_PRINT);
-            $responseBody = Stream::create($body);
-            $response = $response->withBody($responseBody);
-            break;
-
-          default:
-            $response = $this->response->withStatus(406);
-
-            break;
-        }
-      } else {
+      $crt = $this->getFromLocal($certificateId, true);
+      if (empty($crt)) {
+        var_dump(404);
         return $this->respondError(404,'Not Found');
+      }
+      $accept = explode(',',$request->getHeaderLine('Accept'))[0];
+      switch ($accept) {
+        case 'application/json':
+          $response = $this->response->withStatus(200);
+          $response = $response->withHeader('Content-Type','application/json');
+          $body = json_encode($crt->getAttributes(), JSON_PRETTY_PRINT);
+          $responseBody = Stream::create($body);
+          $response = $response->withBody($responseBody);
+          break;
+
+        default:
+          $response = $this->response->withStatus(406);
+
+          break;
       }
       return self::respond($response);
     }
@@ -164,7 +155,6 @@ class Certificates extends Controller
       $body = trim($body);
       // TODO: move to library
       $bodyLines = explode("\n",$body);
-      // var_dump($bodyLines);
       if (sizeof($bodyLines) > 1 ) {
         if (in_array('-----BEGIN CERTIFICATE-----',$bodyLines) && in_array('-----END CERTIFICATE-----',$bodyLines)) {
           while ($bodyLines[0] != '-----BEGIN CERTIFICATE-----') {
@@ -190,17 +180,46 @@ class Certificates extends Controller
       return $body;
     }
 
-    public function getFromSKI($ski)
+    public function getIDsBySKI($ski)
     {
+        if (empty($ski)) {
+          return [];
+        }
         $crts = [];
         $ski = bin2hex($ski);
         if (is_dir($this->skiDir.$ski)) {
           foreach (scandir($this->skiDir.$ski) as $crtFile) {
             if (is_link($this->skiDir.$ski.'/'.$crtFile)) {
-              $crts[] = new X509Certificate(file_get_contents($this->skiDir.$ski.'/'.$crtFile));
+              $crts[] = explode('.',$crtFile)[0];
             }
           }
         }
         return $crts;
+    }
+
+    public function getFromLocal($certificateId, $withIssuer = false)
+    {
+
+      $crtFilePath = $this->crtDir.$certificateId.'.crt';
+      if (!file_exists($crtFilePath)) {
+        return false;
+      }
+      $crtFile = file_get_contents($crtFilePath);
+      $crt = new X509Certificate($crtFile);
+      $crtId = $crt->getIdentifier();
+      if ($withIssuer) {
+        $aki = $crt->getAuthorityKeyIdentifier();
+        foreach ($this->getIDsBySKI($aki) as $issuerId) {
+          if ($issuerId != $crtId) {
+            try {
+              $issuer = $this->getFromLocal($issuerId, true);
+              $crt->withIssuer($issuer);
+            } catch (\Exception $e) {
+              throw new \Exception("Unable to process issuer cert (this should never happen)", 1);
+            }
+          }
+        }
+      }
+      return $crt;
     }
 }
