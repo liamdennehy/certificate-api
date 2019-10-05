@@ -26,6 +26,7 @@ class Certificates extends Controller
         $this->crtDir = $this->dataDir.'certs/';
         $this->caDir = $this->dataDir.'CAs/';
         $this->skiDir = $this->dataDir.'SKIs/';
+        $this->tspServiceDir = $this->dataDir.'TSPServices/';
         $this->response = new Response();
         Helpers::mkdir($this->dataDir.'certs/');
         Helpers::mkdir($this->dataDir.'CAs/');
@@ -40,20 +41,20 @@ class Certificates extends Controller
         return $this->respondError(404,'Not Found');
       }
       $accept = explode(',',$request->getHeaderLine('Accept'))[0];
-      switch ($accept) {
-        case 'application/json':
+      // switch ($accept) {
+      //   case 'application/json':
           $response = $this->response->withStatus(200);
           $response = $response->withHeader('Content-Type','application/json');
           $body = json_encode($crt->getAttributes(), JSON_PRETTY_PRINT);
           $responseBody = Stream::create($body);
           $response = $response->withBody($responseBody);
-          break;
+          // break;
 
-        default:
-          $response = $this->response->withStatus(406);
-
-          break;
-      }
+      //   default:
+      //     $response = $this->response->withStatus(406);
+      //
+      //     break;
+      // }
       return self::respond($response);
     }
 
@@ -205,7 +206,12 @@ class Certificates extends Controller
         return false;
       }
       $crtFile = file_get_contents($crtFilePath);
+      $tspServiceFilePath = $this->crtDir.$certificateId.'.tspService.json';
       $crt = new X509Certificate($crtFile);
+      if (is_link($tspServiceFilePath)) {
+        $tspService = json_decode(file_get_contents($tspServiceFilePath),true);
+        $crt->setTSPService($tspService);
+      }
       $crtId = $crt->getIdentifier();
       if ($withIssuer) {
         $aki = $crt->getAuthorityKeyIdentifier();
