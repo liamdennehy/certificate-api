@@ -14,7 +14,7 @@ php:
     - ./app:/var/www/html/app
     - ./resources:/var/www/html/resources
     - ./routes:/var/www/html/routes
-    - ./data.docker:/var/www/html/data
+    - ${DATADIR}:/var/www/html/data
   working_dir: /var/www/html/public
   command: php-fpm
   # links:

@@ -33,25 +33,58 @@ if (! $lotl->verifyTSL($lotlSigners)) {
 }
 $lotlName = $lotl->getName();
 Helpers::persistTLXML($lotlURI, $dataDir, $lotl);
+if (empty($argv[1])) {
+  print(implode("\n",array_keys($lotl->getTLPointerPaths())));
+} else {
+  $title = $argv[1];
+  print $title;
+  $tlPointer = $lotl->getTLPointerPaths()[$title];
+  $tlURI = $tlPointer['location'];
+  $tlXML = Helpers::getTLXML($tlURI, $dataDir, $title);
+  try {
+    $schemeOperatorName =
+    $lotl->addTrustedListXML($title, $tlXML);
+    $verifiedTLs[$schemeOperatorName] = $schemeOperatorName;
+    Helpers::persistTLXML($tlURI, $dataDir, $lotl->getTrustedLists()[$schemeOperatorName]);
 
-foreach ($lotl->getTLPointerPaths() as $title => $tlPointer) {
-    $tlURI = $tlPointer['location'];
-    $tlXML = Helpers::getTLXML($tlURI, $dataDir, $title);
-    try {
-        $schemeOperatorName =
-            $lotl->addTrustedListXML($title, $tlXML);
-        $verifiedTLs[$schemeOperatorName] = $schemeOperatorName;
-        Helpers::persistTLXML($tlURI, $dataDir, $lotl->getTrustedLists()[$schemeOperatorName]);
-
-    } catch (SignatureException $e) {
-        $unVerifiedTLs[] = $title;
+  } catch (SignatureException $e) {
+    $unVerifiedTLs[] = $title;
+  }
+  $trustedList = $lotl->getTrustedLists(true)[$schemeOperatorName];
+  $st = $trustedList->getSchemeTerritory();
+  $tspServices = $trustedList->getTSPServices();
+  foreach ($tspServices as $name => $tspServiceAttributes) {
+    if (empty($tspServiceAttributes)) {
+      var_dump($name);
     }
-}
-
-$tspServices = $lotl->getTSPServices(true);
-// var_dump(array_keys($tspServices)); exit;
-$tspServiceAttributes = [];
-foreach ($tspServices as $name => $tspServiceAttributes) {
-    print $tspServiceAttributes['name'].PHP_EOL;
+    // var_dump([$name => $tspServiceAttributes]); exit;
+    // print $st.': '.$tspServiceAttributes['name'].': '.memory_get_usage();
     Helpers::persistTSPService($tspServiceAttributes,$dataDir);
+    // print 'h'. PHP_EOL;
+  }
+
+};
+print PHP_EOL; exit;
+
+// foreach ($lotl->getTLPointerPaths() as $title => $tlPointer) {
+// }
+$tls = $lotl->getTrustedLists(true);
+// unset($lotl);
+$tlCount = 0;
+foreach ($tls as $name => &$trustedList) {
+  $st = $trustedList->getSchemeTerritory();
+  print $trustedList->getName().PHP_EOL;
+  $tspServices = $trustedList->getTSPServices();
+  print ($trustedList->getName()).PHP_EOL;
+  foreach ($tspServices as $name => &$tspServiceAttributes) {
+    // var_dump([$name => $tspServiceAttributes]); exit;
+    print $st.': '.$tspServiceAttributes['name'].': '.memory_get_usage();
+    Helpers::persistTSPService($tspServiceAttributes,$dataDir);
+    print 'h'. PHP_EOL;
+  }
+  unset($tls[$name]);
+  unset($trustedList);
+  gc_collect_cycles();
+  $tlCount += 1;
 }
+exit;
