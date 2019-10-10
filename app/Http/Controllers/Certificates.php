@@ -40,7 +40,7 @@ class Certificates extends Controller
         var_dump(404);
         return $this->respondError(404,'Not Found');
       }
-      $accept = explode(',',$request->getHeaderLine('Accept'))[0];
+      // $accept = explode(',',$request->getHeaderLine('Accept'))[0];
       // switch ($accept) {
       //   case 'application/json':
           $response = $this->response->withStatus(200);
