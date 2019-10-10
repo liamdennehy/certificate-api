@@ -104,7 +104,7 @@ class Certificates extends Controller
         try {
           $crt = new X509Certificate($candidate);
         } catch (\Exception $e) {
-          return $this->respondError(400,"Could not parse input as a certificate: ".$e->getMessage());
+          return $this->respondError(400,"Could not parse input as a certificate: ".$e->getMessage(), $candidate);
         }
         $this->persistCertificate($crt);
 
@@ -141,11 +141,16 @@ class Certificates extends Controller
       return (new HttpFoundationFactory())->createResponse($response);
     }
 
-    public function respondError($code, $errorMsg)
+    public function respondError($code, $errorMsg, $moreData = null)
     {
+      $body = [];
       $response = $this->response->withStatus($code);
       $response = $response->withHeader('Content-Type','application/json');
-      $body = json_encode(["error" => $errorMsg]);
+      $body['error'] = $errorMsg;
+      if (! empty($moreData)) {
+        $body['data'] = $moreData;
+      }
+      $body = json_encode($body);
       $responseBody = Stream::create($body);
       $response = $response->withBody($responseBody);
       return (new HttpFoundationFactory())->createResponse($response);
@@ -200,7 +205,6 @@ class Certificates extends Controller
 
     public function getFromLocal($certificateId, $withIssuer = false)
     {
-
       $crtFilePath = $this->crtDir.$certificateId.'.crt';
       if (!file_exists($crtFilePath)) {
         return false;
