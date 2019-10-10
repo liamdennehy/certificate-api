@@ -40,14 +40,16 @@ class Certificates extends Controller
         var_dump(404);
         return $this->respondError(404,'Not Found');
       }
-      $accept = explode(',',$request->getHeaderLine('Accept'))[0];
+      $crtAttributes = $crt->getAttributes();
+
+      // $accept = explode(',',$request->getHeaderLine('Accept'))[0];
       // switch ($accept) {
       //   case 'application/json':
-          $response = $this->response->withStatus(200);
-          $response = $response->withHeader('Content-Type','application/json');
-          $body = json_encode($crt->getAttributes(), JSON_PRETTY_PRINT);
-          $responseBody = Stream::create($body);
-          $response = $response->withBody($responseBody);
+      $response = $this->response->withStatus(200);
+      $response = $response->withHeader('Content-Type','application/json');
+      $body = json_encode($crtAttributes, JSON_PRETTY_PRINT);
+      $responseBody = Stream::create($body);
+      $response = $response->withBody($responseBody);
           // break;
 
       //   default:
@@ -231,5 +233,18 @@ class Certificates extends Controller
         }
       }
       return $crt;
+    }
+
+    public function persistFindings($crtAttributes)
+    {
+      foreach ($crtAttributes['findings'] as $findingLevel => $findings) {
+        foreach ($findings as $component => $componentFindings) {
+          foreach ($componentFindings as $finding) {
+            // code...
+            $crtAttributes['findings-unique'][] = hash('sha256',$component.'.'.print_r($finding[0],true));
+          }
+          // code...
+        }
+      }
     }
 }
