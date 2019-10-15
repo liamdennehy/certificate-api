@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\DataSource;
+use App\Helpers;
 use eIDASCertificate\TrustedList;
 use eIDASCertificate\Certificate\X509Certificate;
+use Psr\Http\Message\ServerRequestInterface;
 
 class TrustedLists extends Controller
 {
     private $dataDir;
+    private $tlDir;
+    private $helper;
 
     /**
      * Create a new controller instance.
@@ -28,24 +32,47 @@ class TrustedLists extends Controller
       if ($this->dataDir[strlen($this->dataDir) - 1] != '/') {
         $this->dataDir .= '/';
       }
+      $this->tlDir = $this->dataDir.'/TrustedLists/';
+      // $this->helpers = new Helpers();
     }
 
-    public function getTL()
+    public function getTrustedList(ServerRequestInterface $request, $trustedListId)
     {
-        // code...
+        if (strpos($trustedListId,'.') > 0 || strlen($trustedListId) != 64) {
+          $response = Helpers::respondError(400, 'Unrecognised Input');
+          return $response;
+
+        }
+        $tlAttributesFile = $this->tlDir.$trustedListId.'.json';
+        if (!is_file($tlAttributesFile)) {
+          Helpers::respondError(404, 'Not Found');
+        }
+        $tlAttributes = json_decode(file_get_contents($tlAttributesFile),true);
+        $tlAttributes = TrustedLists::setLinks($tlAttributes);
+        $response = Helpers::respond(200,'application/json',$tlAttributes);
+        return $response;
     }
 
     public function setLinks($tlAttributes)
     {
       $id = hash(
         'sha256',
-        $tlAttributes['schemeTerritory'].
-        ': '.$tlAttributes['schemeOperatorName']
+        $tlAttributes['sourceURI']
       );
       $tlAttributes['_links']['self'] = '/trusted-lists/'.$id;
       if (array_key_exists('parentTSL',$tlAttributes)) {
         $tlAttributes['parentTSL'] =
           self::setLinks($tlAttributes['parentTSL']);
+      }
+      if (array_key_exists('pointedTLs',$tlAttributes)) {
+        foreach ($tlAttributes['pointedTLs'] as $operator => $pointedTL) {
+          $tlAttributes['pointedTLs'][$operator]['_links']['self'] =
+            '/trusted-lists/'.$pointedTL['sourceId'];
+        }
+      }
+      if (array_key_exists('tslSignedByHash',$tlAttributes)) {
+        $tlAttributes['_links']['signerCert'] =
+          '/certificates/'.$tlAttributes['tslSignedByHash'];
       }
       return $tlAttributes;
     }
@@ -123,7 +150,7 @@ class TrustedLists extends Controller
 
     function getSigned($tlURI, $signingCertDir)
     {
-      $tlXML = TrustedLists::getSourceXML($tlURI, $this->dataDir);
+      $tlXML = TrustedLists::getSourceXML($tlURI);
       $tl = new TrustedList($tlXML);
       $tlSignerFiles = scandir($signingCertDir);
       array_shift($tlSignerFiles);
