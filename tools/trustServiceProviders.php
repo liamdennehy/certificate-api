@@ -75,9 +75,12 @@ foreach ($lotlAttributes['pointedTLs'] as $pointedTL) {
       print '  '.$tspName.PHP_EOL;
       $tspId = hash('sha256',$tlTerritory.': '.$tspName);
       $tspAttributes = $tsp->getAttributes();
+      $tspAttributes['trustedList'] = $tlAttributes;
       $trustServiceProviders->persistAttributes($tspAttributes);
       foreach ($tsp->getTSPServices() as $tspService) {
-        $tspServices->persistAttributes($tspService->getAttributes());
+        $tspServiceAttributes = $tspService->getAttributes();
+        $tspServiceAttributes['trustServiceProvider'] = $tspAttributes;
+        $tspServices->persistAttributes($tspServiceAttributes);
       }
     }
   }
@@ -85,31 +88,7 @@ foreach ($lotlAttributes['pointedTLs'] as $pointedTL) {
 
 
 exit;
-$lotl = $trustedLists->getSigned($lotlURI, $signingCertDir, true); exit;
 
-
-foreach ($lotl['attributes']['pointedTLs'] as $name => $pointedTL) {
-  $tlName = $pointedTL['schemeTerritory'].': '.$pointedTL['schemeOperator'];
-  $tlXML = $trustedLists->getSourceXML($pointedTL['sourceURI']);
-  $tlName = $lotl['trustedList']->addTrustedListXML($tlName, $tlXML);
-  $tl = $lotl['trustedList']->getTrustedLists()[$tlName];
-  $tlSignedBy = $tl->getSignedBy();
-  if (empty($tlSignedBy)) {
-
-  } else {
-    $singedBy = $tl->getSignedBy();
-    $signedByHash = $singedBy->getIdentifier();
-    $certificates->persist($singedBy);
-    $tlSignedBy = $singedBy->getSubjectDN()."($signedByHash)";
-  }
-  $tlAttributes = $tl->getAttributes();
-  $tlAttributes['identifier'] = hash('sha256',$tl->getTSLLocation());
-  $trustedLists->persistAttributes($tlAttributes);
-  $trustedLists->persistXML($tl);
-
-  print 'Trusted List \''.$tl->getName().'\' Sequence Number '.$tl->getSequenceNumber().PHP_EOL;
-  print 'Signed By \''.$tlSignedBy.'\''.PHP_EOL;
-}
 function usage($argv)
 {
   print "TrustedList Attribute exporter".PHP_EOL;

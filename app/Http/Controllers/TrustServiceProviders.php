@@ -47,29 +47,24 @@ class TrustServiceProviders extends Controller
 
     public static function setLinks($tspAttributes)
     {
-      $id = hash(
+      $tspId = hash(
         'sha256',
-        $tspAttributes['trustedList']['schemeTerritory'].
-        ': '.$tspAttributes['name']
+        $tspAttributes['trustedList']['schemeTerritory'].': '.$tspAttributes['name']
       );
-      $tspAttributes['_links']['self'] = '/trust-service-providers/'.$id;
+      $tspAttributes['_links']['self'] = '/trust-service-providers/'.$tspId;
       $tspAttributes['trustedList'] =
         TrustedLists::setLinks($tspAttributes['trustedList']);
       return $tspAttributes;
     }
 
-    public function persistAttributes($attrs)
+    public function persistAttributes($tspAttributes)
     {
-      $tspName = str_replace (
-        '/',
-        '-',
-        $attrs['trustedList']['schemeTerritory'].': '.$attrs['name']
-      );
+      $tspName = $tspAttributes['trustedList']['schemeTerritory'].': '.$tspAttributes['name'];
       $tspId = hash('sha256',$tspName);
       $attrFileName = $tspId.'.json';
       $attrFilePath = $this->tspDir.$attrFileName;
-      $attrLink = $this->tspDir.$tspName.'.json';
-      file_put_contents($attrFilePath,json_encode($attrs,JSON_PRETTY_PRINT));
+      $attrLink = $this->tspDir.str_replace('/','-',$tspName).'.json';
+      file_put_contents($attrFilePath,json_encode($tspAttributes,JSON_PRETTY_PRINT));
           if (file_exists($attrLink)) {
               unlink($attrLink);
           }
