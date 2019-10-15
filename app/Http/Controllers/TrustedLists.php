@@ -44,7 +44,7 @@ class TrustedLists extends Controller
         }
         $tlAttributesFile = $this->tlDir.$trustedListId.'.json';
         if (!is_file($tlAttributesFile)) {
-          Helpers::respondError(404, 'Not Found');
+          return Helpers::respondError(404, 'Not Found');
         }
         $tlAttributes = json_decode(file_get_contents($tlAttributesFile),true);
         $tlAttributes = TrustedLists::setLinks($tlAttributes);
@@ -99,7 +99,6 @@ class TrustedLists extends Controller
             if (file_exists($symlink)) {
                 unlink($symlink);
             }
-            var_dump('./'.$tlFileName, $symlink);
             symlink('./'.$tlFileName, $symlink);
         }
     }
@@ -174,7 +173,6 @@ class TrustedLists extends Controller
       if (!empty($tl->getTSLPointers())) {
         $attrs['pointedTLs'] = [];
         foreach ($tl->getTSLPointers()['xml'] as $tlName => $tlPointer) {
-          // var_dump(array_keys($tlPointer)); exit;
           $pointedTL['schemeTerritory'] = $tlPointer->getSchemeTerritory();
           $pointedTL['schemeOperator'] = $tlPointer->getSchemeOperatorName();
           $pointedTL['sourceURI'] = $tlPointer->getTSLLocation();
