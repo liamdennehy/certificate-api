@@ -37,10 +37,9 @@ class Certificates extends Controller
     {
       $crt = $this->getFromLocal($certificateId, true);
       if (empty($crt)) {
-        var_dump(404);
         return $this->respondError(404,'Not Found');
       }
-      $crtAttributes = $crt->getAttributes();
+      $crtAttributes = $this->getAttributes($crt);
 
       // $accept = explode(',',$request->getHeaderLine('Accept'))[0];
       // switch ($accept) {
@@ -243,8 +242,29 @@ class Certificates extends Controller
             // code...
             $crtAttributes['findings-unique'][] = hash('sha256',$component.'.'.print_r($finding[0],true));
           }
-          // code...
         }
       }
+    }
+
+    public function getAttributes($crt)
+    {
+      $crtAttributes = $crt->getAttributes();
+      $crtAttributes = $this->setLinks($crtAttributes);
+      return $crtAttributes;
+    }
+
+    public function setLinks($crtAttributes)
+    {
+      $crtAttributes['_links']['self']  = '/certificates/'.$crtAttributes['fingerprint'];
+      if (array_key_exists('certificates',$crtAttributes['issuer'])) {
+        foreach ($crtAttributes['issuer']['certificates'] as $index => $issuer) {
+          $crtAttributes['issuer']['certificates'][$index] =
+            $this->setLinks($issuer);
+        }
+      }
+      if (array_key_exists('tspService',$crtAttributes)) {
+        $crtAttributes['tspService'] = TSPServices::setLinks($crtAttributes['tspService']);
+      }
+      return $crtAttributes;
     }
 }
