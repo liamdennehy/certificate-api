@@ -80,7 +80,6 @@ foreach ($lotlAttributes['pointedTLs'] as $pointedTL) {
         $tspServices->persistAttributes($tspService->getAttributes());
       }
     }
-    // print memory_get_usage().PHP_EOL;
   }
 }
 

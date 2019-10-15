@@ -51,20 +51,10 @@ class TSPServices extends Controller
 
     public function persistAttributes($tspServiceAttributes)
     {
-        // var_dump(implode(',',array_keys($tspServiceAttributes)));
         $certificates = new Certificates($this->dataDir);
         $certsDir = $this->dataDir.'certs/';
         $skisDir = $this->dataDir.'SKIs/';
         $casDir = $this->dataDir.'CAs/';
-        // Make sure we're processing associative arrays even if json is object-oriented
-        // $tspServiceAttributes = json_decode(
-        //     json_encode($tspServiceAttributes),
-        //     true
-        // );
-        // var_dump(sizeof($tspServiceAttributes['certificates']));
-        // if(empty($tspServiceAttributes)) {
-        //   exit;
-        // }
         $tspServiceId = hash('sha256', $tspServiceAttributes['name']);
         $country = $tspServiceAttributes['trustServiceProvider']['trustedList']['schemeTerritory'];
         $name = $country.': '.$tspServiceAttributes['name'];
