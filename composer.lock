@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "68d59b675892767d28dcff94b6adf405",
+    "content-hash": "4ade4794dd30dd6a071efdd2af2e6085",
     "packages": [
         {
             "name": "doctrine/inflector",
@@ -1653,16 +1653,16 @@
         },
         {
             "name": "liamdennehy/eidas-certificate",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/liamdennehy/eidas-certificate-parse.git",
-                "reference": "676bd032489c99f5671cca87c0dee1d25cebc730"
+                "reference": "3d8e4167774813ab4e7b2f21f7be137ed8976a7a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/676bd032489c99f5671cca87c0dee1d25cebc730",
-                "reference": "676bd032489c99f5671cca87c0dee1d25cebc730",
+                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/3d8e4167774813ab4e7b2f21f7be137ed8976a7a",
+                "reference": "3d8e4167774813ab4e7b2f21f7be137ed8976a7a",
                 "shasum": ""
             },
             "require": {
@@ -1693,7 +1693,7 @@
                 }
             ],
             "description": "eIDAS Trust Services and Qualified Certificate Statement (QCStatement) library",
-            "time": "2019-10-13T11:22:31+00:00"
+            "time": "2019-10-15T12:19:26+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -1778,16 +1778,16 @@
         },
         {
             "name": "nesbot/carbon",
-            "version": "2.25.1",
+            "version": "2.25.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/briannesbitt/Carbon.git",
-                "reference": "d59c6cea9c4a3547bb6c0dfec451319abdaa4fb1"
+                "reference": "443fe5f1498147e0fbc792142b5dc43e2e8a533f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/briannesbitt/Carbon/zipball/d59c6cea9c4a3547bb6c0dfec451319abdaa4fb1",
-                "reference": "d59c6cea9c4a3547bb6c0dfec451319abdaa4fb1",
+                "url": "https://api.github.com/repos/briannesbitt/Carbon/zipball/443fe5f1498147e0fbc792142b5dc43e2e8a533f",
+                "reference": "443fe5f1498147e0fbc792142b5dc43e2e8a533f",
                 "shasum": ""
             },
             "require": {
@@ -1841,7 +1841,7 @@
                 "datetime",
                 "time"
             ],
-            "time": "2019-10-05T15:52:23+00:00"
+            "time": "2019-10-14T14:18:59+00:00"
         },
         {
             "name": "nikic/fast-route",
