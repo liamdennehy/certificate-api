@@ -120,7 +120,8 @@ class DataSource
             'headers' => [
                 // 'User-Agent' => 'GuzzleHttp/6.3.3 curl/7.61.1 PHP/7.1.22',
                 'User-Agent' => 'eIDAS-Certificate-Parse',
-            ]
+            ],
+            'connect_timeout' => 3.14
         ]);
         try {
             $response = $client->request('GET');
