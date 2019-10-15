@@ -112,7 +112,7 @@ abstract class Helpers
         }
     }
 
-    public function persistFile($filePath, $fileContents)
+    public static function persistFile($filePath, $fileContents)
     {
         file_put_contents($filePath, $fileContents);
         chmod($filePath, 0664);

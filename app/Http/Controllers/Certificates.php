@@ -51,9 +51,6 @@ class Certificates extends Controller
       }
       $crtAttributes = $this->getAttributes($crt);
 
-      // $accept = explode(',',$request->getHeaderLine('Accept'))[0];
-      // switch ($accept) {
-      //   case 'application/json':
       $response = $this->response->withStatus(200);
       $response = $response->withHeader('Content-Type','application/json');
       $body = json_encode($crtAttributes, JSON_PRETTY_PRINT);
