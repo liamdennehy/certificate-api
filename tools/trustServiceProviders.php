@@ -55,7 +55,7 @@ foreach ($lotlAttributes['pointedTLs'] as $pointedTL) {
   $tlAttributes = json_decode(file_get_contents($tlDir.$tlId.'.json'),true);
   $tlName = $tlAttributes['schemeTerritory'].': '.$tlAttributes['schemeOperatorName'];
   print $tlName.' '.PHP_EOL;
-  if (!array_key_exists('tslSignatureVerifiedAt',$tlAttributes)) {
+  if (!array_key_exists('signature',$tlAttributes)) {
     print $tlAttributes['schemeOperatorName'].' Not verified'.PHP_EOL;
     continue;
   } else {
