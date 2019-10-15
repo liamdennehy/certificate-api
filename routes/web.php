@@ -25,3 +25,4 @@ $router->get('/certificates/{certificateId}', 'Certificates@getCertificate');
 $router->post('/certificates/', 'Certificates@postCertificate');
 
 $router->get('/trusted-lists/{trustedListId}', 'TrustedLists@getTrustedList');
+$router->get('/trust-service-providers/{tspId}', 'TrustServiceProviders@getTSP');
