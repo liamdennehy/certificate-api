@@ -3,9 +3,19 @@
 namespace App;
 
 use eIDASCertificate\Certificate\X509Certificate;
+use Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory;
+use Nyholm\Psr7\Response;
+use Nyholm\Psr7\Stream;
 
 abstract class Helpers
 {
+
+    private $response;
+
+    public function __construct($value='')
+    {
+      $this->response = new Response();
+    }
     public static function persistTSPService($tspServiceAttributes, $dataDir)
     {
         $tspServicesDir = $dataDir.'TSPServices/';
@@ -14,9 +24,9 @@ abstract class Helpers
         $casDir = $dataDir.'CAs/';
         // Make sure we're processing associative arrays even if json is object-oriented
         $tspServiceAttributes = json_decode(
-        json_encode($tspServiceAttributes),
-        true
-    );
+            json_encode($tspServiceAttributes),
+            true
+        );
         $tspServiceId = hash('sha256', $tspServiceAttributes['name']);
         $country = $tspServiceAttributes['trustServiceProvider']['trustedList']['schemeTerritory'];
         $name = $country.': '.$tspServiceAttributes['name'];
@@ -108,4 +118,39 @@ abstract class Helpers
         chmod($filePath, 0664);
         return true;
     }
+
+    public static function respond($code, $contentType, $body)
+    {
+      $response = (new Response)->withStatus($code);
+      $response = $response->withHeader('Content-Type',$contentType);
+      switch ($contentType) {
+        case 'application/json':
+          $body = json_encode($body, JSON_PRETTY_PRINT);
+          break;
+
+        default:
+          // code...
+          break;
+      }
+      $responseBody = Stream::create($body);
+      $response = $response->withBody($responseBody);
+
+      return (new HttpFoundationFactory())->createResponse($response);
+    }
+
+    public static function respondError($code, $errorMsg, $moreData = null)
+    {
+      $body = [];
+      $response = (new Response())->withStatus($code);
+      $response = $response->withHeader('Content-Type','application/json');
+      $body['error'] = $errorMsg;
+      if (! empty($moreData)) {
+        $body['data'] = $moreData;
+      }
+      $body = json_encode($body);
+      $responseBody = Stream::create($body);
+      $response = $response->withBody($responseBody);
+      return (new HttpFoundationFactory())->createResponse($response);
+    }
+
 }
