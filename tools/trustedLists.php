@@ -45,12 +45,14 @@ if (!array_key_exists(2,$argv)) {
 } elseif (!is_dir(__DIR__.'/../'.$argv[2])) {
   print "Trusted certificate directory does not seem to exist".PHP_EOL;
   exit(1);
+} elseif (sizeof(array_diff(scandir(__DIR__.'/../'.$argv[2]),['.','..'])) == 0) {
+  print "Trusted certificate directory seems empty".PHP_EOL;
 } else {
   $signingCertDir = __DIR__.'/../'.$argv[2];
 }
 $certificates = new Certificates($dataDir);
 $trustedLists = new TrustedLists($dataDir);
-$lotl = $trustedLists->getSigned($lotlURI, $signingCertDir);
+$lotl = $trustedLists->getSigned($lotlURI, $signingCertDir.'/');
 $trustedLists->persistAttributes($lotl['attributes']);
 $trustedLists->persistXML($lotl['trustedList']);
 $certificates->persist($lotl['trustedList']->getSignedBy());
@@ -63,10 +65,10 @@ foreach ($lotl['attributes']['pointedTLs'] as $name => $pointedTL) {
   if (empty($tlSignedBy)) {
     $tlSignedBy = $tl->getSignedByHash();
   } else {
-    $singedBy = $tl->getSignedBy();
-    $signedByHash = $singedBy->getIdentifier();
-    $certificates->persist($singedBy);
-    $tlSignedBy = $singedBy->getSubjectDN()."($signedByHash)";
+    $signedBy = $tl->getSignedBy();
+    $signedByHash = $signedBy->getIdentifier();
+    $certificates->persist($signedBy);
+    $tlSignedBy = $signedBy->getSubjectDN()."($signedByHash)";
   }
   $tlAttributes = $tl->getAttributes();
   $tlAttributes['identifier'] = hash('sha256',$tl->getTSLLocation());
