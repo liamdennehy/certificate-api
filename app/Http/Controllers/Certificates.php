@@ -20,9 +20,19 @@ class Certificates extends Controller
      *
      * @return void
      */
-    public function __construct()
+    public function __construct($dataDir = null)
     {
-        $this->dataDir = __DIR__.'/../../../data/';
+        if (empty($dataDir)) {
+          $this->dataDir = __DIR__.'/../../../data/';
+        } else {
+          $this->dataDir = $dataDir;
+        }
+        if (!is_dir($this->dataDir)) {
+          throw new \Exception("DataDir '$dataDir' does not exist", 1);
+        }
+        if ($this->dataDir[strlen($this->dataDir) - 1] != '/') {
+          $this->dataDir .= '/';
+        }
         $this->crtDir = $this->dataDir.'certs/';
         $this->caDir = $this->dataDir.'CAs/';
         $this->skiDir = $this->dataDir.'SKIs/';
@@ -107,7 +117,7 @@ class Certificates extends Controller
         } catch (\Exception $e) {
           return $this->respondError(400,"Could not parse input as a certificate: ".$e->getMessage(), $candidate);
         }
-        $this->persistCertificate($crt);
+        $this->persist($crt);
 
         $crtId = $crt->getIdentifier();
         $getPath = "/certificates/$crtId?fromPost=true";
@@ -117,7 +127,7 @@ class Certificates extends Controller
 
     }
 
-    public function persistCertificate($crt)
+    public function persist($crt)
     {
         $crtId = $crt->getIdentifier();
         $crtFileName = $crt->getIdentifier().'.crt';

@@ -17,6 +17,7 @@
         "liamdennehy/eidas-certificate": "^2.0",
         "nyholm/psr7": "^1.2",
         "symfony/psr-http-message-bridge": "^1.2",
+        "vlucas/phpdotenv": "^3.6",
         "zendframework/zend-diactoros": "^2.1"
     },
     "require-dev": {

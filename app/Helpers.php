@@ -6,46 +6,6 @@ use eIDASCertificate\Certificate\X509Certificate;
 
 abstract class Helpers
 {
-    public static function getTLXML($tlURI, $dataDir, $name, $maxAge = 86400)
-    {
-        $now = (int)date('U');
-        $tlXML = null;
-        $tlURIId = hash('sha256', $tlURI);
-        $tlDirPath = $dataDir.'TrustedLists/';
-        $tlFilePath = $tlDirPath.'/tl-'.$tlURIId.'.xml';
-        if (file_exists($tlFilePath)) {
-            $tlXMLAge = $now - filemtime($tlFilePath);
-            if ($tlXMLAge < $maxAge) {
-                $tlXML = file_get_contents($tlFilePath);
-            }
-        }
-        if (empty($tlXML)) {
-            $tlXML = DataSource::getHTTP($tlURI);
-        }
-        return $tlXML;
-    }
-
-    public static function persistTLXML($tlURI, $dataDir, $tl, $maxAge = 86400)
-    {
-        $now = (int)date('U');
-        $tlXMLAge = null;
-        $tlName = $tl->getName();
-        $tlURIId = hash('sha256', $tlURI);
-        $tlDirPath = $dataDir.'TrustedLists/';
-        $tlFilePath = $tlDirPath.'/tl-'.$tlURIId.'.xml';
-        $symlink = $tlDirPath.$tlName.'.xml';
-        if (file_exists($tlFilePath)) {
-            $tlXMLAge = $now - filemtime($tlFilePath);
-        }
-        if (is_null($tlXMLAge) || $tlXMLAge >= $maxAge) {
-            file_put_contents($tlFilePath, $tl->getXML());
-            if (file_exists($symlink)) {
-                unlink($symlink);
-            }
-            symlink('./tl-'.$tlURIId.'.xml', $symlink);
-        }
-    }
-
     public static function persistTSPService($tspServiceAttributes, $dataDir)
     {
         $tspServicesDir = $dataDir.'TSPServices/';
