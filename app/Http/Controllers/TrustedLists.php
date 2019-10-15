@@ -41,7 +41,6 @@ class TrustedLists extends Controller
         if (strpos($trustedListId,'.') > 0 || strlen($trustedListId) != 64) {
           $response = Helpers::respondError(400, 'Unrecognised Input');
           return $response;
-
         }
         $tlAttributesFile = $this->tlDir.$trustedListId.'.json';
         if (!is_file($tlAttributesFile)) {
@@ -53,7 +52,7 @@ class TrustedLists extends Controller
         return $response;
     }
 
-    public function setLinks($tlAttributes)
+    public static function setLinks($tlAttributes)
     {
       $id = hash(
         'sha256',
@@ -134,7 +133,7 @@ class TrustedLists extends Controller
         $tlDirPath = $this->dataDir.'TrustedLists/';
         $tlFileName = $tlURIId.'.xml';
         $tlFilePath = $tlDirPath.$tlFileName;
-        if (file_exists($tlFilePath)) {
+        if (file_exists($tlFilePath) && $maxAge != false) {
             $tlXMLAge = $now - filemtime($tlFilePath);
             if ($tlXMLAge < $maxAge) {
                 $tlXML = file_get_contents($tlFilePath);
@@ -148,9 +147,9 @@ class TrustedLists extends Controller
         return $tlXML;
     }
 
-    function getSigned($tlURI, $signingCertDir)
+    function getSigned($tlURI, $signingCertDir, $noDownload = false)
     {
-      $tlXML = TrustedLists::getSourceXML($tlURI);
+      $tlXML = TrustedLists::getSourceXML($tlURI, $noDownload);
       $tl = new TrustedList($tlXML);
       $tlSignerFiles = scandir($signingCertDir);
       array_shift($tlSignerFiles);
