@@ -53,10 +53,10 @@ $trustedListDirFiles = array_diff(scandir($tlDir), array('..', '.'));
 foreach ($lotlAttributes['pointedTLs'] as $pointedTL) {
   $tlId = $pointedTL['sourceId'];
   $tlAttributes = json_decode(file_get_contents($tlDir.$tlId.'.json'),true);
-  $tlName = $tlAttributes['schemeTerritory'].': '.$tlAttributes['schemeOperatorName'];
+  $tlName = $tlAttributes['schemeTerritory'].': '.$tlAttributes['schemeOperator']['name'];
   print $tlName.' '.PHP_EOL;
   if (!array_key_exists('signature',$tlAttributes)) {
-    print $tlAttributes['schemeOperatorName'].' Not verified'.PHP_EOL;
+    print $tlAttributes['schemeOperator']['name'].' Not verified'.PHP_EOL;
     continue;
   } else {
     $trustedListAttributes[$tlName] = $tlAttributes;

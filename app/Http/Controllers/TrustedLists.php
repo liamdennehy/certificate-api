@@ -109,7 +109,7 @@ class TrustedLists extends Controller
       $tlName = str_replace(
         '/',
         '-',
-        $attrs['schemeTerritory'].': '.$attrs['schemeOperatorName']
+        $attrs['schemeTerritory'].': '.$attrs['schemeOperator']['name']
       );
       $tlURIId = hash('sha256', $attrs['sourceURI']);
       $tlDirPath = $this->dataDir.'TrustedLists/';

@@ -46,6 +46,12 @@ class TSPServices extends Controller
       $tspServiceAttributes['_links']['self'] = '/tsp-services/'.$id;
       $tspServiceAttributes['trustServiceProvider'] =
         TrustServiceProviders::setLinks($tspServiceAttributes['trustServiceProvider']);
+        if (array_key_exists('certificates',$tspServiceAttributes)) {
+          foreach ($tspServiceAttributes['certificates'] as $index => $tspServiceCertificate) {
+            $tspServiceAttributes['certificates'][$index]['_links']['self'] =
+              '/certificates/'.$tspServiceAttributes['certificates'][$index]['id'];
+          }
+        }
       return $tspServiceAttributes;
     }
 
@@ -72,7 +78,7 @@ class TSPServices extends Controller
                 mkdir($skiDir);
             }
         }
-        foreach ($tspServiceAttributes['certificates'] as $certificate) {
+        foreach ($tspServiceAttributes['x509Certificates'] as $certificate) {
             $PEM = $certificate['PEM'];
             $crt = new X509Certificate($PEM);
             $crtId = $crt->getIdentifier();

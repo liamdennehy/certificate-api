@@ -14,7 +14,7 @@
         "php": "^7.2",
         "guzzlehttp/guzzle": "^6.3",
         "laravel/lumen-framework": "^6.0",
-        "liamdennehy/eidas-certificate": "^2.1",
+        "liamdennehy/eidas-certificate": "^2.2",
         "nyholm/psr7": "^1.2",
         "symfony/psr-http-message-bridge": "^1.2",
         "vlucas/phpdotenv": "^3.6",
