@@ -4,7 +4,7 @@ nginx:
   links:
     - php
   ports:
-    - "80:80"
+    - "${NGINXPORT}:80"
 php:
   build: docker/php
   volumes:
