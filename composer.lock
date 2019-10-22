@@ -1653,16 +1653,16 @@
         },
         {
             "name": "liamdennehy/eidas-certificate",
-            "version": "2.4.2",
+            "version": "2.4.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/liamdennehy/eidas-certificate-parse.git",
-                "reference": "57dbcc458d4b4d26c44d43057588ae3701b17cbd"
+                "reference": "9fb8c2e88ea22656090bd8c897850608fc87894a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/57dbcc458d4b4d26c44d43057588ae3701b17cbd",
-                "reference": "57dbcc458d4b4d26c44d43057588ae3701b17cbd",
+                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/9fb8c2e88ea22656090bd8c897850608fc87894a",
+                "reference": "9fb8c2e88ea22656090bd8c897850608fc87894a",
                 "shasum": ""
             },
             "require": {
@@ -1693,7 +1693,7 @@
                 }
             ],
             "description": "eIDAS Trust Services and Qualified Certificate Statement (QCStatement) library",
-            "time": "2019-10-22T20:06:14+00:00"
+            "time": "2019-10-22T20:39:54+00:00"
         },
         {
             "name": "monolog/monolog",
