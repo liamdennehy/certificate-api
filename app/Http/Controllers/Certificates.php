@@ -9,6 +9,7 @@ use Nyholm\Psr7\Response;
 use Nyholm\Psr7\Stream;
 use Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use eIDASCertificate\OCSP\OCSPRequest;
 
 class Certificates extends Controller
 {
@@ -45,9 +46,46 @@ class Certificates extends Controller
 
     public function getCertificate(ServerRequestInterface $request, $certificateId)
     {
+
       $crt = $this->getFromLocal($certificateId, true);
       if (empty($crt)) {
         return $this->respondError(404,'Not Found');
+      }
+      if (! $request->hasHeader('accept')) {
+        $accept = 'application/json';
+      } else {
+        $accept = null;
+        foreach (explode(',',$request->getHeaderLine('accept')) as $acceptable) {
+          if (! is_null($accept)) {
+            break;
+          }
+          $acceptable = explode(';',$acceptable)[0];
+          switch ($acceptable) {
+            case 'application/json':
+              $accept = 'application/json';
+              break;
+            case 'text/html':
+              $accept = 'text/html';
+              break;
+            case 'application/ocsp-request':
+              $accept = 'application/ocsp-request';
+              break;
+
+            default:
+              // code...
+              break;
+          }
+        }
+      }
+      switch ($accept) {
+        case 'application/ocsp-request':
+          $response = $this->getCertificateOCSPRequest($crt);
+          return $response;
+          break;
+
+        default:
+          // code...
+          break;
       }
       $crtAttributes = $this->getAttributes($crt);
 
@@ -66,6 +104,28 @@ class Certificates extends Controller
       return self::respond($response);
     }
 
+    public function getCertificateOCSPRequest($crt)
+    {
+        $issuerIDs = array_keys($crt->getIssuers());
+        if (sizeof($issuerIDs) > 1) {
+          return (new Response(400,['IssuerCount' => sizeof($issuerIDs)],'More than one issuer. Sorry...'));
+        } elseif (sizeof($issuerIDs) == 0) {
+          return (new Response(
+            404,
+            ['IssuerURI' => implode(',',$crt->getIssuerURIs())],
+            "I don't know who the issuer is, check the 'IssuerURI' header for possible URLs")
+          );
+        }
+        $issuer = current($crt->getIssuers());
+        $request = OCSPRequest::fromCertificate($crt, $issuer, 'sha256', 'auto');
+        return new Response(
+          200,
+          ['OCSPUri' => implode(',',$crt->getOCSPURIs())],
+          $request->getBinary()
+        );
+
+    }
+
     public function getCertificates(ServerRequestInterface $request)
     {
       $response = $this->response->withStatus(201);
@@ -74,6 +134,8 @@ class Certificates extends Controller
 
     public function postCertificate(ServerRequestInterface $request)
     {
+      // file_put_contents('header-'.(new \Datetime)->format('U'),var_dump($request->getHeaders(),true));
+
         if ($request->hasHeader('content-type')) {
           $ct = strtolower($request->getHeaderLine('content-type'));
         }
@@ -105,6 +167,7 @@ class Certificates extends Controller
             break;
 
           default:
+            file_put_contents('header-'.(new \Datetime)->format('U'),$request->getHeaderLine('accept'));
             return $this->respondError(400,'Could not understand the request');
 
             break;
