@@ -8,3 +8,4 @@ Homestead.yaml
 .phpunit.result.cache
 data.docker/
 .php_cs.cache
+public

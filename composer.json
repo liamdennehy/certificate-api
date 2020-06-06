@@ -13,12 +13,11 @@
     "require": {
         "php": "^7.2",
         "guzzlehttp/guzzle": "^6.3",
-        "laravel/lumen-framework": "^6.0",
-        "liamdennehy/eidas-certificate": "^2",
+        "laravel/lumen-framework": "^7.1",
+        "liamdennehy/eidas-certificate": "^3",
         "nyholm/psr7": "^1.2",
-        "symfony/psr-http-message-bridge": "^1.2",
-        "vlucas/phpdotenv": "^3.6",
-        "zendframework/zend-diactoros": "^2.1"
+        "symfony/psr-http-message-bridge": "^2.0",
+        "vlucas/phpdotenv": "^4.1"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.15",
