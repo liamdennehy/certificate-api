@@ -10,6 +10,7 @@ use Nyholm\Psr7\Stream;
 use Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use eIDASCertificate\OCSP\OCSPRequest;
+use eIDASCertificate\OCSP\OCSPResponse;
 
 class Certificates extends Controller
 {
@@ -46,83 +47,145 @@ class Certificates extends Controller
 
     public function getCertificate(ServerRequestInterface $request, $certificateId)
     {
-
+      $response = $this->response;
+      if (sizeof(explode('.',$certificateId)) == 2) {
+        $suffix = explode('.',$certificateId)[0];
+        $certificateId = explode('.',$certificateId)[1];
+      }
       $crt = $this->getFromLocal($certificateId, true);
       if (empty($crt)) {
         return $this->respondError(404,'Not Found');
       }
-      if (! $request->hasHeader('accept')) {
+      if (! empty($suffix) && $suffix = 'crt') {
+        $accept = 'application/x-pem-file';
+      } elseif (! empty($suffix) && $suffix = 'cer') {
+        $accept = 'application/pkix-cert';
+      } elseif (! $request->hasHeader('accept')) {
         $accept = 'application/json';
       } else {
-        $accept = null;
         foreach (explode(',',$request->getHeaderLine('accept')) as $acceptable) {
-          if (! is_null($accept)) {
+          if (! empty($accept)) {
             break;
           }
           $acceptable = explode(';',$acceptable)[0];
           switch ($acceptable) {
-            case 'application/json':
-              $accept = 'application/json';
-              break;
             case 'text/html':
               $accept = 'text/html';
               break;
             case 'application/ocsp-request':
               $accept = 'application/ocsp-request';
               break;
+            case 'application/x-pem-file':
+              $accept = 'application/x-pem-file';
+              break;
+            case 'application/pkix-cert':
+              $accept = 'application/pkix-cert';
+              break;
 
+            case 'application/json':
             default:
-              // code...
+              $accept = 'application/json';
               break;
           }
         }
       }
+
       switch ($accept) {
         case 'application/ocsp-request':
-          $response = $this->getCertificateOCSPRequest($crt);
-          return $response;
+          if (array_key_exists('sha1',$request->getQueryParams())) {
+            $alg = 'sha1';
+          } elseif (array_key_exists('sha512',$request->getQueryParams())) {
+            $alg = 'sha512';
+          } elseif (array_key_exists('sha384',$request->getQueryParams())) {
+            $alg = 'sha384';
+          } else {
+            $alg = 'sha256';
+          }
+          if (array_key_exists('nononce',$request->getQueryParams())) {
+            $nonce = 'none';
+          } else {
+            $nonce = 'auto';
+          }
+          if (! $crt->hasIssuers()) {
+            $response = $response->withHeader('IssuerURI',implode(',',$crt->getIssuerURIs()));
+            $response = $response->withHeader('Content-Type','text/plain');
+            $body = "Certificate with id '$certificateId' has no associated issuer. check the 'IssuerURI' header for possible URLs";
+          } elseif (sizeof($crt->getIssuers()) > 1) {
+            $body = "More than one issuer in certificate '$certificateId'. Sorry...";
+            $response = $response->withHeader('Content-Type','text/plain');
+            $response = $response->withHeader('Issuer',implode(',',array_keys($crt->getIssers())));
+          } else {
+            $ocspRequest = $this->getCertificateOCSPRequest($crt, $alg, $nonce);
+            $body = $ocspRequest['application/ocsp-response'];
+            $response = $response->withHeader('OCSP-URI',$ocspRequest['OCSP-URI']);
+          }
           break;
-
+        case 'application/x-pem-file':
+          if (array_key_exists('chain',$request->getQueryParams()) && $request->getQueryParams()['chain'] != 'false') {
+            $body = $crt->toPEM(true);
+          } else {
+            $body = $crt->toPEM(false);
+          }
+          $response = $response->withHeader('Content-Type','application/x-pem-file');
+          break;
+        case 'application/pkix-cert':
+          $body = $crt->getBinary();
+          $response = $response->withHeader('Content-Type','application/pkix-cert');
+          break;
+        case 'application/json':
+          $body = json_encode($this->getAttributes($crt), JSON_PRETTY_PRINT);
+          $response = $response->withHeader('Content-Type','application/json');
+          break;
         default:
-          // code...
+          $body = dd($this->getAttributes($crt));
+          $response = $response->withHeader('Content-Type','text/html');
+          $response = $response->withHeader('From-Accept',$request->getHeaderLine('accept'));
           break;
       }
-      $crtAttributes = $this->getAttributes($crt);
-
-      $response = $this->response->withStatus(200);
-      $response = $response->withHeader('Content-Type','application/json');
-      $body = json_encode($crtAttributes, JSON_PRETTY_PRINT);
       $responseBody = Stream::create($body);
-      $response = $response->withBody($responseBody);
-          // break;
-
-      //   default:
-      //     $response = $this->response->withStatus(406);
-      //
-      //     break;
-      // }
-      return self::respond($response);
+      // $response = $response->withBody($responseBody);
+      return self::respond($response->withBody($responseBody));
     }
 
-    public function getCertificateOCSPRequest($crt)
+    public function getCertificateOCSPRequest($certs, $alg = 'sha256', $nonce = 'auto')
     {
-        $issuerIDs = array_keys($crt->getIssuers());
-        if (sizeof($issuerIDs) > 1) {
-          return (new Response(400,['IssuerCount' => sizeof($issuerIDs)],'More than one issuer. Sorry...'));
-        } elseif (sizeof($issuerIDs) == 0) {
-          return (new Response(
-            404,
-            ['IssuerURI' => implode(',',$crt->getIssuerURIs())],
-            "I don't know who the issuer is, check the 'IssuerURI' header for possible URLs")
-          );
+        if (! is_array($certs)) {
+          $certs = [$certs];
         }
-        $issuer = current($crt->getIssuers());
-        $request = OCSPRequest::fromCertificate($crt, $issuer, 'sha256', 'auto');
-        return new Response(
-          200,
-          ['OCSPUri' => implode(',',$crt->getOCSPURIs())],
-          $request->getBinary()
-        );
+        $issuerId = null;
+        $ocspURL = null;
+        foreach ($certs as $cert) {
+          $certId = $cert->getIdentifier();
+          if (! $cert->hasIssuers()) {
+            return (new Response(
+              400,
+              ['IssuerURI' => implode(',',$cert->getIssuerURIs()),'Content-Type' => 'text/plain'],
+              "Certificate with id '$certId' has no associated issuer. check the 'IssuerURI' header for possible URLs"
+            ));
+          }
+          if (sizeof($cert->getIssuers()) > 1) {
+            return [
+              'code' => 400,
+              'headers' => ['IssuerCount' => sizeof($issuerIDs), 'Content-Type' => 'text/plain'],
+              'body' => "More than one issuer in certificate '$certId'. Sorry..."
+            ];
+          }
+          if (is_null($issuerId)) {
+            $issuerId = current($cert->getIssuers())->getIdentifier();
+          } elseif (current($cert->getIssuers())->getIdentifier() !== $issuerId) {
+            return (new Response(
+              400,
+              ['Content-Type' => 'text/plain'],
+              'Provided certificates ar from multiple issuer.'
+            ));
+          }
+        }
+        $ocspRequest = OCSPRequest::fromCertificate($certs,$alg, $nonce);
+        return [
+          'OCSP-URI' => implode(',',$cert->getOCSPURIs()),
+          'application/ocsp-response' => $ocspRequest->getBinary()
+        ];
+
 
     }
 
@@ -134,14 +197,13 @@ class Certificates extends Controller
 
     public function postCertificate(ServerRequestInterface $request)
     {
-      // file_put_contents('header-'.(new \Datetime)->format('U'),var_dump($request->getHeaders(),true));
-
         if ($request->hasHeader('content-type')) {
           $ct = strtolower($request->getHeaderLine('content-type'));
         }
         $ct = explode(';',$ct)[0];
         switch ($ct) {
           case 'application/x-www-form-urlencoded':
+          case 'application/x-pem-file':
             if ($request->getBody()->getSize() >= 10241) {
               return $this->respondError(400,'Too much data arrived, is this really a certificate?');
             }
@@ -166,6 +228,34 @@ class Certificates extends Controller
             // code...
             break;
 
+          case 'application/ocsp-response':
+            $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
+            // foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+            //   $this->persistCert($includedCert);
+            // }
+            $response = $this->response->withStatus(200);
+            $attributes = $ocspResponse->getAttributes();
+            $attributes['_links']['signer'] =
+              '/certificates/'.$ocspResponse->getSigningCert()->getIdentifier();
+            if ($ocspResponse->hasCertificates()) {
+              foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+                $attributes['_links']['includedCert'][$certId] =
+                  '/certifictes/'.$certId;
+              }
+            }
+            if ($request->getHeaderLine('Accept') == 'application/json') {
+              $jsonBody = json_encode($attributes,JSON_PRETTY_PRINT);
+              $responseBody = Stream::create($jsonBody);
+              $response = $response->withHeader('Location','application/json');
+            } else {
+              $responseBody = Stream::create(dd($attributes));
+              $response = $response->withHeader('Content-Type','text/html');
+            }
+            $response = $response->withBody($responseBody);
+            return self::respond($response);
+
+            break;
+
           default:
             file_put_contents('header-'.(new \Datetime)->format('U'),$request->getHeaderLine('accept'));
             return $this->respondError(400,'Could not understand the request');
@@ -177,7 +267,7 @@ class Certificates extends Controller
         } catch (\Exception $e) {
           return $this->respondError(400,"Could not parse input as a certificate: ".$e->getMessage(), $candidate);
         }
-        $this->persist($crt);
+        $this->persistCert($crt);
 
         $crtId = $crt->getIdentifier();
         $getPath = "/certificates/$crtId?fromPost=true";
@@ -187,10 +277,10 @@ class Certificates extends Controller
 
     }
 
-    public function persist($crt)
+    public function persistCert($crt)
     {
         $crtId = $crt->getIdentifier();
-        $crtFileName = $crt->getIdentifier().'.crt';
+        $crtFileName = $crtId.'.crt';
         $crtPath = $this->crtDir.$crtFileName;
         if (file_exists($crtPath)) {
             return false;
@@ -248,7 +338,6 @@ class Certificates extends Controller
         substr($body,-25,25) == '-----END CERTIFICATE-----'
       ) {
         $b64 = trim(substr(substr($body,27),0,strlen($body)-52));
-        var_dump($b64);
         $body =
           "-----BEGIN CERTIFICATE-----\r\n".
           chunk_split(base64_encode(base64_decode($b64)), 64, "\r\n").
