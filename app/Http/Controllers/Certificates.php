@@ -230,9 +230,9 @@ class Certificates extends Controller
 
           case 'application/ocsp-response':
             $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
-            // foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
-            //   $this->persistCert($includedCert);
-            // }
+            foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+              $this->persistCert($includedCert);
+            }
             $response = $this->response->withStatus(200);
             $attributes = $ocspResponse->getAttributes();
             $attributes['_links']['signer'] =
