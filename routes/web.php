@@ -30,6 +30,7 @@ $router->get('/info', function () use ($router) {
 $router->get('/certificates', 'Certificates@getCertificates');
 
 $router->get('/certificates/{certificateId}', 'Certificates@getCertificate');
+$router->post('/certificates/{certificateId}', 'Certificates@postCertificate');
 $router->post('/certificates/', 'Certificates@postCertificates');
 
 $router->get('/trusted-lists/{trustedListId}', 'TrustedLists@getTrustedList');

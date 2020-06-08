@@ -196,6 +196,31 @@ class Certificates extends Controller
       return self::respond($response);
     }
 
+    public function postCertificate(ServerRequestInterface $request, $certificateId)
+    {
+      if ($request->hasHeader('content-type')) {
+        $ct = strtolower($request->getHeaderLine('content-type'));
+      }
+      $crt = $this->getFromLocal($certificateId, true);
+      if (empty($crt)) {
+        return $this->respondError(404,'Not Found');
+      }
+      switch ($ct) {
+        case 'application/ocsp-response':
+          return self::respond(
+            $this->postOCSPResponse(
+              $request, $crt
+            )
+          );
+
+          break;
+
+        default:
+          return $this->respondError(400,'Could not understand the request');
+          break;
+      }
+    }
+
     public function postCertificates(ServerRequestInterface $request)
     {
         if ($request->hasHeader('content-type')) {
@@ -259,9 +284,14 @@ class Certificates extends Controller
 
     }
 
-    public function postOCSPResponse($request, $crtId = null)
+    public function postOCSPResponse($request, $crt = null)
     {
       $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
+      if (! empty($crt) && $crt->hasIssuers()) {
+        foreach ($crt->getIssuers() as $issuer) {
+          $ocspResponse->setResponder($issuer);
+        }
+      }
       if ($ocspResponse->hasCertificates()) {
         foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
           $this->persistCert($includedCert);
