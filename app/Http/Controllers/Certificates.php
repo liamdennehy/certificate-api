@@ -230,35 +230,11 @@ class Certificates extends Controller
             break;
 
           case 'application/ocsp-response':
-            $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
-            if ($ocspResponse->hasCertificates()) {
-              // code...
-              foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
-                $this->persistCert($includedCert);
-              }
-            }
-            $response = $this->response->withStatus(200);
-            $attributes = $ocspResponse->getAttributes();
-            if (! is_null($ocspResponse->getSigningCert())) {
-              $attributes['_links']['signer'] =
-              '/certificates/'.$ocspResponse->getSigningCert()->getIdentifier();
-            }
-            if ($ocspResponse->hasCertificates()) {
-              foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
-                $attributes['_links']['includedCert'][$certId] =
-                  '/certifictes/'.$certId;
-              }
-            }
-            if ($request->getHeaderLine('Accept') == 'application/json') {
-              $jsonBody = json_encode($attributes,JSON_PRETTY_PRINT);
-              $responseBody = Stream::create($jsonBody);
-              $response = $response->withHeader('Content-Type','application/json');
-            } else {
-              $responseBody = Stream::create(dd($attributes));
-              $response = $response->withHeader('Content-Type','text/html');
-            }
-            $response = $response->withBody($responseBody);
-            return self::respond($response);
+            return self::respond(
+              $this->postOCSPResponse(
+                $request
+              )
+            );
 
             break;
 
@@ -281,6 +257,38 @@ class Certificates extends Controller
         $response = $response->withHeader('Location',$getPath);
         return self::respond($response);
 
+    }
+
+    public function postOCSPResponse($request, $crtId = null)
+    {
+      $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
+      if ($ocspResponse->hasCertificates()) {
+        foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+          $this->persistCert($includedCert);
+        }
+      }
+      $response = $this->response->withStatus(200);
+      $attributes = $ocspResponse->getAttributes();
+      if (! is_null($ocspResponse->getSigningCert())) {
+        $attributes['_links']['signer'] =
+        '/certificates/'.$ocspResponse->getSigningCert()->getIdentifier();
+      }
+      if ($ocspResponse->hasCertificates()) {
+        foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+          $attributes['_links']['includedCert'][$certId] =
+            '/certifictes/'.$certId;
+        }
+      }
+      if ($request->getHeaderLine('Accept') == 'application/json') {
+        $jsonBody = json_encode($attributes,JSON_PRETTY_PRINT);
+        $responseBody = Stream::create($jsonBody);
+        $response = $response->withHeader('Content-Type','application/json');
+      } else {
+        $responseBody = Stream::create(dd($attributes));
+        $response = $response->withHeader('Content-Type','text/html');
+      }
+      $response = $response->withBody($responseBody);
+      return $response;
     }
 
     public function persistCert($crt)
