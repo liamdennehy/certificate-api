@@ -286,37 +286,48 @@ class Certificates extends Controller
 
     public function postOCSPResponse($request, $crt = null)
     {
-      $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
-      if (! empty($crt) && $crt->hasIssuers()) {
-        foreach ($crt->getIssuers() as $issuer) {
-          $ocspResponse->setResponder($issuer);
+      $response = $this->response;
+      try {
+        $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
+      } catch (\Exception $e) {
+        $response = $response->withStatus(400);
+        $responseBody = Stream::create('Malformed Request');
+        $response = $response->withBody($responseBody);
+        return $response;
+      }
+
+      if ($ocspResponse->getStatus() == 0) {
+        if (! empty($crt) && $crt->hasIssuers()) {
+          foreach ($crt->getIssuers() as $issuer) {
+            $ocspResponse->setResponder($issuer);
+          }
         }
-      }
-      if ($ocspResponse->hasCertificates()) {
-        foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
-          $this->persistCert($includedCert);
+        if ($ocspResponse->hasCertificates()) {
+          foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+            $this->persistCert($includedCert);
+          }
         }
-      }
-      $response = $this->response->withStatus(200);
-      $attributes = $ocspResponse->getAttributes();
-      if (! is_null($ocspResponse->getSigningCert())) {
-        $attributes['_links']['signer'] =
-        '/certificates/'.$ocspResponse->getSigningCert()->getIdentifier();
-      }
-      if ($ocspResponse->hasCertificates()) {
-        foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
-          $attributes['_links']['includedCert'][$certId] =
+        if (! is_null($ocspResponse->getSigningCert())) {
+          $attributes['_links']['signer'] =
+          '/certificates/'.$ocspResponse->getSigningCert()->getIdentifier();
+        }
+        if ($ocspResponse->hasCertificates()) {
+          foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+            $attributes['_links']['includedCert'][$certId] =
             '/certifictes/'.$certId;
+          }
         }
       }
+      $response = $response->withStatus(200);
+      $attributes = $ocspResponse->getAttributes();
       if ($request->getHeaderLine('Accept') == 'application/json') {
-        $jsonBody = json_encode($attributes,JSON_PRETTY_PRINT);
-        $responseBody = Stream::create($jsonBody);
+        $bodyText = json_encode($attributes,JSON_PRETTY_PRINT);
         $response = $response->withHeader('Content-Type','application/json');
       } else {
-        $responseBody = Stream::create(dd($attributes));
+        $bodyText = dd($attributes);
         $response = $response->withHeader('Content-Type','text/html');
       }
+      $responseBody = Stream::create($bodyText);
       $response = $response->withBody($responseBody);
       return $response;
     }
