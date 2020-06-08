@@ -317,8 +317,8 @@ class Certificates extends Controller
       if (! empty($moreData)) {
         $body['data'] = $moreData;
       }
-      $body = json_encode($body);
-      $responseBody = Stream::create($body);
+      // $body = json_encode($body);
+      $responseBody = Stream::create(json_encode($body));
       $response = $response->withBody($responseBody);
       return (new HttpFoundationFactory())->createResponse($response);
     }
