@@ -115,6 +115,7 @@ class Certificates extends Controller
             $response = $response->withHeader('Content-Type','text/plain');
             $response = $response->withHeader('Issuer',implode(',',array_keys($crt->getIssers())));
           } else {
+            $response = $response->withHeader('Content-Type','application/ocsp-request');
             $ocspRequest = $this->getCertificateOCSPRequest($crt, $alg, $nonce);
             $body = $ocspRequest['application/ocsp-response'];
             $response = $response->withHeader('OCSP-URI',$ocspRequest['OCSP-URI']);
@@ -195,7 +196,7 @@ class Certificates extends Controller
       return self::respond($response);
     }
 
-    public function postCertificate(ServerRequestInterface $request)
+    public function postCertificates(ServerRequestInterface $request)
     {
         if ($request->hasHeader('content-type')) {
           $ct = strtolower($request->getHeaderLine('content-type'));
@@ -230,13 +231,18 @@ class Certificates extends Controller
 
           case 'application/ocsp-response':
             $ocspResponse = OCSPResponse::fromDER((string)$request->getBody());
-            foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
-              $this->persistCert($includedCert);
+            if ($ocspResponse->hasCertificates()) {
+              // code...
+              foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
+                $this->persistCert($includedCert);
+              }
             }
             $response = $this->response->withStatus(200);
             $attributes = $ocspResponse->getAttributes();
-            $attributes['_links']['signer'] =
+            if (! is_null($ocspResponse->getSigningCert())) {
+              $attributes['_links']['signer'] =
               '/certificates/'.$ocspResponse->getSigningCert()->getIdentifier();
+            }
             if ($ocspResponse->hasCertificates()) {
               foreach ($ocspResponse->getCertificates() as $certId => $includedCert) {
                 $attributes['_links']['includedCert'][$certId] =
@@ -246,7 +252,7 @@ class Certificates extends Controller
             if ($request->getHeaderLine('Accept') == 'application/json') {
               $jsonBody = json_encode($attributes,JSON_PRETTY_PRINT);
               $responseBody = Stream::create($jsonBody);
-              $response = $response->withHeader('Location','application/json');
+              $response = $response->withHeader('Content-Type','application/json');
             } else {
               $responseBody = Stream::create(dd($attributes));
               $response = $response->withHeader('Content-Type','text/html');
