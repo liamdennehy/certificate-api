@@ -1804,23 +1804,23 @@
         },
         {
             "name": "liamdennehy/eidas-certificate",
-            "version": "3.6.0",
+            "version": "3.6.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/liamdennehy/eidas-certificate-parse.git",
-                "reference": "94a266b47580930fe3e9193782074b88f93b8601"
+                "reference": "e229a5c841586d822d03f79d5554af6972504562"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/94a266b47580930fe3e9193782074b88f93b8601",
-                "reference": "94a266b47580930fe3e9193782074b88f93b8601",
+                "url": "https://api.github.com/repos/liamdennehy/eidas-certificate-parse/zipball/e229a5c841586d822d03f79d5554af6972504562",
+                "reference": "e229a5c841586d822d03f79d5554af6972504562",
                 "shasum": ""
             },
             "require": {
                 "guzzlehttp/guzzle": "^6.3",
                 "liamdennehy/phpseclib": "^3.0",
                 "php": ">=7.1",
-                "phpseclib/phpseclib": "^2.0",
+                "phpseclib/phpseclib": ">=2.0.31 <3.0",
                 "robrichards/xmlseclibs": "^3.1",
                 "sop/asn1": "^3.4"
             },
@@ -1845,7 +1845,7 @@
                 }
             ],
             "description": "eIDAS Trust Services and Qualified Certificate Statement (QCStatement) library",
-            "time": "2020-11-06T05:25:36+00:00"
+            "time": "2021-04-29T06:11:32+00:00"
         },
         {
             "name": "liamdennehy/phpseclib",
